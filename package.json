@@ -1,0 +1,17 @@
+{
+  "name": "remote-merkle-patricia-tree",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^1.2.1",
+    "merkle-patricia-tree": "git://github.com/kumavis/merkle-patricia-tree.git#86b5c190da08cc7627d7a83cdcaa45f8421bc2fa",
+    "multiplex-rpc": "^1.0.1",
+    "readable-stream": "^2.0.0"
+  }
+}
