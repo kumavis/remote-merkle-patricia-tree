@@ -2,6 +2,8 @@ const async = require('async')
 const RPC = require('multiplex-rpc')
 const PassThrough = require('readable-stream').PassThrough
 // const through2 = require('through2')
+const callTogether = require('./util.js').callTogether
+
 
 module.exports = RemoteInterface
 
@@ -59,8 +61,8 @@ function createNetworkStream(){
 
 // gets from remote db
 function get(_super, key, cb){
+  var cb = callTogether(cb, this.sem.leave.bind(this.sem))
   this.sem.take(function(){
-    this.sem.leave()
     var remote = this._remote
     key = encode(key)
     remote.get(key, function(err, value){
@@ -74,8 +76,8 @@ function get(_super, key, cb){
 // puts to remote db
 function put(_super, key, value, cb){
   if (!value) return this.del(key, cb)
+  var cb = callTogether(cb, this.sem.leave.bind(this.sem))
   this.sem.take(function(){
-    this.sem.leave()
     var remote = this._remote
     // encode key and value
     key = encode(key)
@@ -89,6 +91,7 @@ function put(_super, key, value, cb){
 }
 
 function del(_super, key, cb){
+  var cb = callTogether(cb, this.sem.leave.bind(this.sem))
   this.sem.take(function(){
     this.sem.leave()
     var remote = this._remote
@@ -104,6 +107,7 @@ function del(_super, key, cb){
 function batch(_super, ops, cb){
   // serialize ops
   ops = encodeOps(ops)
+  var cb = callTogether(cb, this.sem.leave.bind(this.sem))
   this.sem.take(function(){
     this.sem.leave()
     var remote = this._remote
@@ -114,27 +118,27 @@ function batch(_super, ops, cb){
 function createReadStream(){
   var passthrough = new PassThrough()
   this.sem.take(function(){
-    this.sem.leave()
     var remote = this._remote
     remote.createReadStream(function(readStream){
       readStream.pipe(passthrough)
     })
+    this.sem.leave()
   }.bind(this))
   return passthrough
 }
 
 function checkpoint(_super){
   this.sem.take(function(){
-    this.sem.leave()
     var remote = this._remote
     remote.checkpoint()
     _super()
+    this.sem.leave()
   }.bind(this))
 }
 
 function commit(_super, cb){
+  var cb = callTogether(cb, this.sem.leave.bind(this.sem))
   this.sem.take(function(){
-    this.sem.leave()
     var remote = this._remote
     async.parallel([
       remote.commit.bind(remote),
@@ -144,8 +148,8 @@ function commit(_super, cb){
 }
 
 function revert(_super, cb){
+  var cb = callTogether(cb, this.sem.leave.bind(this.sem))
   this.sem.take(function(){
-    this.sem.leave()
     var remote = this._remote
     async.parallel([
       remote.revert.bind(remote),
