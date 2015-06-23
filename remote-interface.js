@@ -65,7 +65,8 @@ function get(_super, key, cb){
   this.sem.take(function(){
     var remote = this._remote
     key = encode(key)
-    remote.get(key, function(err, value){
+    var root = encode(this.root)
+    remote.get(root, key, function(err, value){
       if (err) return cb(err)
       value = value && new Buffer(value, 'binary')
       cb(null, value)
@@ -82,7 +83,8 @@ function put(_super, key, value, cb){
     // encode key and value
     key = encode(key)
     value = encode(value)
-    remote.put(key, value, function(err, root){
+    var root = encode(this.root)
+    remote.put(root, key, value, function(err, root){
       if (err) return cb(err)
       this.root = decode(root)
       cb()
@@ -96,7 +98,8 @@ function del(_super, key, cb){
     this.sem.leave()
     var remote = this._remote
     key = encode(key)
-    remote.del(key, function(err, root){
+    var root = encode(this.root)
+    remote.del(root, key, function(err, root){
       if (err) return cb(err)
       this.root = decode(root)
       cb()
@@ -111,7 +114,12 @@ function batch(_super, ops, cb){
   this.sem.take(function(){
     this.sem.leave()
     var remote = this._remote
-    remote.batch(ops, cb)
+    var root = encode(this.root)
+    remote.batch(root, ops, function(err, root){
+      if (err) return cb(err)
+      this.root = decode(root)
+      cb()
+    }.bind(this))
   }.bind(this))
 }
 
@@ -119,7 +127,8 @@ function createReadStream(){
   var passthrough = new PassThrough()
   this.sem.take(function(){
     var remote = this._remote
-    remote.createReadStream(function(readStream){
+    var root = encode(this.root)
+    remote.createReadStream(root, function(readStream){
       readStream.pipe(passthrough)
     })
     this.sem.leave()
@@ -130,7 +139,8 @@ function createReadStream(){
 function checkpoint(_super){
   this.sem.take(function(){
     var remote = this._remote
-    remote.checkpoint()
+    var root = encode(this.root)
+    remote.checkpoint(root)
     _super()
     this.sem.leave()
   }.bind(this))
@@ -140,8 +150,9 @@ function commit(_super, cb){
   var cb = callTogether(cb, this.sem.leave.bind(this.sem))
   this.sem.take(function(){
     var remote = this._remote
+    var root = encode(this.root)
     async.parallel([
-      remote.commit.bind(remote),
+      remote.commit.bind(remote, root),
       _super.bind(this),
     ], cb)
   }.bind(this))

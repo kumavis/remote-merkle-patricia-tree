@@ -11,14 +11,14 @@ function HostInterface (trie) {
     put: put.bind(trie),
     del: del.bind(trie),
     batch: batch.bind(trie),
-    checkpoint: trie.checkpoint.bind(trie),
-    commit: trie.commit.bind(trie),
-    revert: trie.revert.bind(trie),
-    createReadStream: trie.createReadStream.bind(trie),
+    checkpoint: checkpoint.bind(trie),
+    commit: commit.bind(trie),
+    revert: revert.bind(trie),
+    createReadStream: createReadStream.bind(trie),
   })
 
   Object.defineProperty(trie, 'isConnected', {
-    get: function(){
+    get: function() {
       return !!trie._remote
     }
   })
@@ -31,46 +31,15 @@ function HostInterface (trie) {
 
 }
 
-// gets the value and returns it
-function get(key, cb){
-  key = decode(key)
-  this.get(key, function(err, value){
-    if (err) return cb(err)
-    cb(null, encode(value))
-  }.bind(this))
-}
 
-// sets the value and returns the new root
-function put(key, value, cb){
-  key = decode(key)
-  value = decode(value)
-  this.put(key, value, function(){
-    cb(null, encode(this.root))
-  }.bind(this))
-}
-
-// removes the value and returns the new root
-function del(key, cb){
-  key = decode(key)
-  this.del(key, function(){
-    cb(null, encode(this.root))
-  }.bind(this))
-}
-
-// performs the batch operations, then return the new root
-function batch(ops, cb){
-  ops = decodeOps(ops)
-  this.batch(ops, function(){
-    cb(null, encode(this.root))
-  }.bind(this))
-}
+// local methods
 
 // creates a duplex stream for networking
-function createNetworkStream(){
+function createNetworkStream() {
   var rpc = this._rpc
   // var dup = through2()
   // dup.pipe(rpc).pipe(dup)
-  // dup.on('data', function(){
+  // dup.on('data', function() {
   //   console.log('host: '+data.toString())
   // })
   return rpc
@@ -83,25 +52,90 @@ function copy(_super) {
   return trie
 }
 
+
+// remote methods
+
+// gets the value and returns it
+function get(root, key, cb) {
+  this.root = decode(root)
+  key = decode(key)
+  this.get(key, function(err, value) {
+    if (err) return cb(err)
+    cb(null, encode(value))
+  }.bind(this))
+}
+
+// sets the value and returns the new root
+function put(root, key, value, cb) {
+  this.root = decode(root)
+  key = decode(key)
+  value = decode(value)
+  this.put(key, value, function() {
+    cb(null, encode(this.root))
+  }.bind(this))
+}
+
+// removes the value and returns the new root
+function del(root, key, cb) {
+  this.root = decode(root)
+  key = decode(key)
+  this.del(key, function() {
+    cb(null, encode(this.root))
+  }.bind(this))
+}
+
+// performs the batch operations, then return the new root
+function batch(root, ops, cb) {
+  this.root = decode(root)
+  ops = decodeOps(ops)
+  this.batch(ops, function() {
+    cb(null, encode(this.root))
+  }.bind(this))
+}
+
+// syncs the root then checkpoints
+function checkpoint(root) {
+  this.root = decode(root)
+  this.checkpoint()
+}
+
+// syncs the root then commits
+function commit(root) {
+  this.root = decode(root)
+  this.commit()
+}
+
+// simply reverts
+function revert() {
+  this.rever()
+}
+
+// syncs the root then creates a readstream
+function createReadStream(root) {
+  this.root = decode(root)
+  return this.createReadStream()
+}
+
+
 // util
 
-function superify(trie, key, fn){
+function superify(trie, key, fn) {
   var _super = trie[key].bind(trie)
   trie[key] = fn.bind(trie, _super)
 }
 
-function noop(){}
+function noop() {}
 
-function encode(value){
+function encode(value) {
   return value && value.toString('binary')
 }
 
-function decode(value){
+function decode(value) {
   return new Buffer(value, 'binary')
 }
 
 function decodeOps(ops) {
-  return ops.map(function(op){
+  return ops.map(function(op) {
     return {
       type: op.type,
       key: decode(op.key),
