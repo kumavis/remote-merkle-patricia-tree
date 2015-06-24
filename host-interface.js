@@ -106,8 +106,11 @@ function commit(root) {
 }
 
 // simply reverts
-function revert() {
-  this.rever()
+function revert(cb) {
+  this.revert(function(err){
+    if (err) return cb(err)
+    cb(null, encode(this.root))
+  }.bind(this))
 }
 
 // syncs the root then creates a readstream

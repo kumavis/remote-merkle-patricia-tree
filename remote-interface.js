@@ -165,7 +165,11 @@ function revert(_super, cb){
     async.parallel([
       remote.revert.bind(remote),
       _super.bind(this),
-    ], cb)
+    ], function(err, results){
+      if (err) return cb(err)
+      this.root = decode(results[0])
+      cb(null)
+    })
   }.bind(this))
 }
 
