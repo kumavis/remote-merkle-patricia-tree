@@ -100,9 +100,9 @@ function checkpoint(root) {
 }
 
 // syncs the root then commits
-function commit(root) {
+function commit(root, cb) {
   this.root = decode(root)
-  this.commit()
+  this.commit(cb)
 }
 
 // simply reverts

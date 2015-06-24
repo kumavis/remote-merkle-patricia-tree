@@ -28,6 +28,32 @@ test('basic functionality', function(t){
 
 })
 
+test('checkpoint + commit + revert', function(t){
+  t.plan(5)
+
+  var remote = new RemoteTrie()
+  var host = new HostTrie()
+  var transport = remote.createNetworkStream()
+  transport.pipe(host.createNetworkStream()).pipe(transport)
+
+  // temp
+  remote._log = true
+
+  t.equals(remote.isCheckpoint, false, 'NOT a checkpoint')
+  remote.checkpoint()
+  t.equals(remote.isCheckpoint, true, 'YES a checkpoint')
+  remote.commit(function(){
+    console.log('wat')
+    t.equals(remote.isCheckpoint, false, 'NOT a checkpoint')
+    remote.checkpoint()
+    t.equals(remote.isCheckpoint, true, 'YES a checkpoint')
+    remote.revert(function(){
+      t.equals(remote.isCheckpoint, false, 'NOT a checkpoint')
+    })
+  })
+
+})
+
 test('root override', function(t){
   t.plan(3)
 

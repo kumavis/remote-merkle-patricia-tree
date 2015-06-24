@@ -149,7 +149,7 @@ function commit(_super, cb){
     var root = encode(this.root)
     async.parallel([
       remote.commit.bind(remote, root),
-      _super.bind(this),
+      _super,
     ], cb)
   }.bind(this))
 }
