@@ -13,6 +13,12 @@ function RemoteInterface (trie) {
   
   var rpc = trie._rpc = RPC()
 
+  // used to connect a trie to the network
+  // especially when making copies of the trie
+  // should return a duplex stream to a hostTrie
+  // it is called synchronously
+  this._connectFn = null
+
   trie._remote = rpc.wrap([
     'get',
     'put',
@@ -31,6 +37,7 @@ function RemoteInterface (trie) {
   })
 
   // new methods
+  trie.connect = connect
   trie.createNetworkStream = createNetworkStream
   
   // overwrites
@@ -44,6 +51,17 @@ function RemoteInterface (trie) {
   superify(trie, 'createReadStream', createReadStream)
   superify(trie, 'copy', copy)
 
+}
+
+// uses _connectFn to setup a connection
+// to a host trie
+// automatically called when creating a copy
+function connect() {
+  var connectFn = this._connectFn
+  if (!connectFn) return console.log('no connectionFn!')
+  var rpcStream = this.createNetworkStream()
+  var transport = connectFn()
+  rpcStream.pipe(transport).pipe(rpcStream)
 }
 
 // creates a duplex stream for networking
@@ -66,7 +84,7 @@ function get(_super, key, cb){
     var root = encode(this.root)
     remote.get(root, key, function(err, value){
       if (err) return cb(err)
-      value = value && new Buffer(value, 'binary')
+      value = decode(value)
       cb(null, value)
     })
   }.bind(this))
@@ -174,6 +192,9 @@ function revert(_super, cb){
 function copy(_super) {
   var trie = _super()
   RemoteInterface(trie)
+  // initialize networking if provided
+  trie._connectFn = this._connectFn
+  trie.connect()
   return trie
 }
 

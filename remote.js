@@ -7,8 +7,12 @@ module.exports = RemoteTrie
 
 inherits(RemoteTrie, StateTrie)
 
-function RemoteTrie(opts) {
+function RemoteTrie(connectFn, opts) {
   StateTrie.call(this, opts)
   remoteInterface(this)
   secureInterface(this)
+
+  // optional connection-generating fn
+  this._connectFn = connectFn
+  this.connect()
 }

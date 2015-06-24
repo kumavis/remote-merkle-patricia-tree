@@ -5,10 +5,14 @@ const HostTrie = require('../host')
 test('basic functionality', function(t){
   t.plan(6)
 
-  var remote = new RemoteTrie()
-  var host = new HostTrie()
-  var transport = remote.createNetworkStream()
-  transport.pipe(host.createNetworkStream()).pipe(transport)
+  var host = null
+  var remote = new RemoteTrie(connect)
+
+  function connect(){
+    var newHost = new HostTrie()
+    if (!host) host = newHost
+    return newHost.createNetworkStream()
+  }
 
   remote.checkpoint()
   remote.put('beans', 'cakes', function(){
@@ -31,19 +35,19 @@ test('basic functionality', function(t){
 test('checkpoint + commit + revert', function(t){
   t.plan(5)
 
-  var remote = new RemoteTrie()
-  var host = new HostTrie()
-  var transport = remote.createNetworkStream()
-  transport.pipe(host.createNetworkStream()).pipe(transport)
+  var host = null
+  var remote = new RemoteTrie(connect)
 
-  // temp
-  remote._log = true
+  function connect(){
+    var newHost = new HostTrie()
+    if (!host) host = newHost
+    return newHost.createNetworkStream()
+  }
 
   t.equals(remote.isCheckpoint, false, 'NOT a checkpoint')
   remote.checkpoint()
   t.equals(remote.isCheckpoint, true, 'YES a checkpoint')
   remote.commit(function(){
-    console.log('wat')
     t.equals(remote.isCheckpoint, false, 'NOT a checkpoint')
     remote.checkpoint()
     t.equals(remote.isCheckpoint, true, 'YES a checkpoint')
@@ -54,13 +58,60 @@ test('checkpoint + commit + revert', function(t){
 
 })
 
+test('remoteTrie.copy', function(t){
+  t.plan(14)
+
+  var host = null
+  var copyHost = null
+  var remote = new RemoteTrie(connect)
+  var copy = remote.copy()
+
+  function connect(){
+    var newHost = new HostTrie()
+    if (host && !copyHost) copyHost = newHost
+    if (!host) host = newHost
+    return newHost.createNetworkStream()
+  }
+
+  var initialRoot = remote.root.toString('hex')
+
+  copy.checkpoint()
+  copy.put('beans', 'cakes', function(){
+    t.equals(remote.root.toString('hex'), initialRoot, 'remote root unchanged')
+    t.equals(host.root.toString('hex'), initialRoot, 'original host root unchanged')
+    t.equals(copy.root.toString('hex'), copyHost.root.toString('hex'), 'roots match')
+    copy.get('beans', function(err, result){
+      t.equals(remote.root.toString('hex'), initialRoot, 'remote root unchanged')
+      t.equals(host.root.toString('hex'), initialRoot, 'original host root unchanged')
+      t.equals(copy.root.toString('hex'), copyHost.root.toString('hex'), 'roots match')
+      t.equals(result.toString(), 'cakes', 'value should be as set, "cakes"')
+      copy.revert(function(){
+        t.equals(remote.root.toString('hex'), initialRoot, 'remote root unchanged')
+        t.equals(host.root.toString('hex'), initialRoot, 'original host root unchanged')
+        t.equals(copy.root.toString('hex'), copyHost.root.toString('hex'), 'roots match')
+        copy.get('beans', function(err, result){
+          t.equals(remote.root.toString('hex'), initialRoot, 'remote root unchanged')
+          t.equals(host.root.toString('hex'), initialRoot, 'original host root unchanged')
+          t.equals(copy.root.toString('hex'), copyHost.root.toString('hex'), 'roots match')
+          t.equals(result, null, 'value should be null')
+        })
+      })
+    })
+  })
+
+})
+
 test('root override', function(t){
   t.plan(3)
 
-  var remote = new RemoteTrie()
-  var host = new HostTrie()
-  var transport = remote.createNetworkStream()
-  transport.pipe(host.createNetworkStream()).pipe(transport)
+  var host = null
+  var remote = new RemoteTrie(connect)
+
+  function connect(){
+    var newHost = new HostTrie()
+    if (!host) host = newHost
+    return newHost.createNetworkStream()
+  }
 
   remote.put('beans', 'cakes', function(){
     var oldRoot = remote.root
