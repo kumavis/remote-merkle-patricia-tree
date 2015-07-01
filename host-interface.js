@@ -57,6 +57,7 @@ function copy(_super) {
 
 // gets the value and returns it
 function get(root, key, cb) {
+  cb = cb || noop
   this.root = decode(root)
   key = decode(key)
   this.get(key, function(err, value) {
@@ -67,6 +68,7 @@ function get(root, key, cb) {
 
 // sets the value and returns the new root
 function put(root, key, value, cb) {
+  cb = cb || noop
   this.root = decode(root)
   key = decode(key)
   value = decode(value)
@@ -77,6 +79,7 @@ function put(root, key, value, cb) {
 
 // removes the value and returns the new root
 function del(root, key, cb) {
+  cb = cb || noop
   this.root = decode(root)
   key = decode(key)
   this.del(key, function() {
@@ -86,6 +89,7 @@ function del(root, key, cb) {
 
 // performs the batch operations, then return the new root
 function batch(root, ops, cb) {
+  cb = cb || noop
   this.root = decode(root)
   ops = decodeOps(ops)
   this.batch(ops, function() {
@@ -101,6 +105,7 @@ function checkpoint(root) {
 
 // syncs the root then commits
 function commit(root, cb) {
+  cb = cb || noop
   this.root = decode(root)
   this.commit(cb)
 }
@@ -122,12 +127,12 @@ function createReadStream(root) {
 
 // util
 
+function noop() {}
+
 function superify(trie, key, fn) {
   var _super = trie[key].bind(trie)
   trie[key] = fn.bind(trie, _super)
 }
-
-function noop() {}
 
 function encode(value) {
   return value && value.toString('binary')

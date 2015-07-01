@@ -31,7 +31,7 @@ function RemoteInterface (trie) {
   ])
 
   Object.defineProperty(trie, 'isConnected', {
-    get: function(){
+    get: function() {
       return !!trie._remote
     }
   })
@@ -65,24 +65,25 @@ function connect() {
 }
 
 // creates a duplex stream for networking
-function createNetworkStream(){
+function createNetworkStream() {
   var rpc = this._rpc
   // var dup = through2()
   // dup.pipe(rpc).pipe(dup)
-  // dup.on('data', function(){
+  // dup.on('data', function() {
   //   console.log('host: '+data.toString())
   // })
   return rpc
 }
 
 // gets from remote db
-function get(_super, key, cb){
-  this.sem.take(function(){
+function get(_super, key, cb) {
+  cb = cb || noop
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     key = encode(key)
     var root = encode(this.root)
-    remote.get(root, key, function(err, value){
+    remote.get(root, key, function(err, value) {
       if (err) return cb(err)
       value = decode(value)
       cb(null, value)
@@ -91,16 +92,17 @@ function get(_super, key, cb){
 }
 
 // puts to remote db
-function put(_super, key, value, cb){
+function put(_super, key, value, cb) {
+  cb = cb || noop
   if (!value) return this.del(key, cb)
-  this.sem.take(function(){
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     // encode key and value
     key = encode(key)
     value = encode(value)
     var root = encode(this.root)
-    remote.put(root, key, value, function(err, root){
+    remote.put(root, key, value, function(err, root) {
       if (err) return cb(err)
       this.root = decode(root)
       cb()
@@ -108,13 +110,14 @@ function put(_super, key, value, cb){
   }.bind(this))
 }
 
-function del(_super, key, cb){
-  this.sem.take(function(){
+function del(_super, key, cb) {
+  cb = cb || noop
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     key = encode(key)
     var root = encode(this.root)
-    remote.del(root, key, function(err, root){
+    remote.del(root, key, function(err, root) {
       if (err) return cb(err)
       this.root = decode(root)
       cb()
@@ -122,14 +125,15 @@ function del(_super, key, cb){
   }.bind(this))
 }
 
-function batch(_super, ops, cb){
+function batch(_super, ops, cb) {
+  cb = cb || noop
   // serialize ops
   ops = encodeOps(ops)
-  this.sem.take(function(){
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     var root = encode(this.root)
-    remote.batch(root, ops, function(err, root){
+    remote.batch(root, ops, function(err, root) {
       if (err) return cb(err)
       this.root = decode(root)
       cb()
@@ -137,21 +141,21 @@ function batch(_super, ops, cb){
   }.bind(this))
 }
 
-function createReadStream(){
+function createReadStream() {
   var passthrough = new PassThrough()
-  this.sem.take(function(){
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     var root = encode(this.root)
-    remote.createReadStream(root, function(readStream){
+    remote.createReadStream(root, function(readStream) {
       readStream.pipe(passthrough)
     })
   }.bind(this))
   return passthrough
 }
 
-function checkpoint(_super){
-  this.sem.take(function(){
+function checkpoint(_super) {
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     var root = encode(this.root)
@@ -160,8 +164,9 @@ function checkpoint(_super){
   }.bind(this))
 }
 
-function commit(_super, cb){
-  this.sem.take(function(){
+function commit(_super, cb) {
+  cb = cb || noop
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     var root = encode(this.root)
@@ -172,14 +177,15 @@ function commit(_super, cb){
   }.bind(this))
 }
 
-function revert(_super, cb){
-  this.sem.take(function(){
+function revert(_super, cb) {
+  cb = cb || noop
+  this.sem.take(function() {
     this.sem.leave()
     var remote = this._remote
     async.parallel([
       remote.revert.bind(remote),
       _super.bind(this),
-    ], function(err, results){
+    ], function(err, results) {
       if (err) return cb(err)
       this.root = decode(results[0])
       cb(null)
@@ -200,26 +206,26 @@ function copy(_super) {
 
 // util
 
-function superify(trie, key, fn){
+function noop(){}
+
+function superify(trie, key, fn) {
   var _super = trie[key].bind(trie)
   trie[key] = fn.bind(trie, _super)
 }
 
-function noop(){}
-
-function encode(value){
+function encode(value) {
   if (value && !Buffer.isBuffer(value)) {
     value = (new Buffer(value, 'utf8'))
   }
   return value && value.toString('binary')
 }
 
-function decode(value){
+function decode(value) {
   return value && new Buffer(value, 'binary')
 }
 
 function encodeOps(ops) {
-  return ops.map(function(op){
+  return ops.map(function(op) {
     return {
       type: op.type,
       key: encode(op.key),
