@@ -9,7 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "async": "^1.2.1",
+    "async": "^2.1.2",
     "merkle-patricia-tree": "git://github.com/kumavis/merkle-patricia-tree.git#6e317265b32ac472b211e4a298fbe017e747dc69",
     "multiplex-rpc": "^1.0.1",
     "readable-stream": "^2.0.0"
